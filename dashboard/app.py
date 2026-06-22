@@ -86,6 +86,20 @@ st.markdown("""
 # Database path
 db_path = "/Users/vaishnavnarigiri/Desktop/bluestock/db/bluestock_mf.db"
 
+# Benchmark index mapping
+benchmark_mapping = {
+    'NIFTY 100 TRI': 'NIFTY100',
+    'BSE 250 SmallCap TRI': 'BSE_SMALLCAP',
+    'CRISIL Dynamic Gilt Index': 'CRISIL_GILT',
+    'NIFTY Midcap 150 TRI': 'NIFTY_MIDCAP150',
+    'CRISIL Short Term Bond Index': 'CRISIL_GILT',
+    'NIFTY 500 TRI': 'NIFTY500',
+    'CRISIL Liquid Fund AI Index': 'CRISIL_LIQUID',
+    'NIFTY 50 TRI': 'NIFTY50',
+    'NIFTY Midcap 50 TRI': 'NIFTY_MIDCAP150',
+    'NIFTY Large Midcap 250 TRI': 'NIFTY100'
+}
+
 # Data Helpers
 def get_connection():
     return sqlite3.connect(db_path)
@@ -103,7 +117,7 @@ def load_performance_data():
     df = pd.read_sql_query("""
         SELECT f.*, p.return_1yr_pct, p.return_3yr_pct, p.return_5yr_pct, 
                p.alpha, p.beta, p.sharpe_ratio, p.sortino_ratio, p.std_dev_ann_pct,
-               p.max_drawdown_pct, p.morningstar_rating, p.composite_score
+               p.max_drawdown_pct, p.morningstar_rating, p.composite_score, p.aum_crore
         FROM dim_fund f
         JOIN fact_performance p ON f.amfi_code = p.amfi_code
     """, conn)
@@ -334,7 +348,7 @@ elif page == "Investor Analytics":
         st.subheader("Average Investment by Age Group")
         age_avg = df_tx_filtered.groupby("age_group")["amount_inr"].mean().reset_index()
         fig_age = px.bar(age_avg, x="age_group", y="amount_inr", color="age_group",
-                         color_discrete_sequence=px.colors.categorical.G10)
+                         color_discrete_sequence=px.colors.qualitative.G10)
         fig_age.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=350, showlegend=False)
         st.plotly_chart(fig_age, use_container_width=True)
 
@@ -384,8 +398,8 @@ elif page == "SIP & Market Trends":
         
         # Configure layout for dual axis
         fig_dual.update_layout(
-            yaxis=dict(title="SIP Inflow (Rs. Crore)", titlefont=dict(color="#10b981"), tickfont=dict(color="#10b981")),
-            yaxis2=dict(title="Nifty 50 Index Value", titlefont=dict(color="#2563eb"), tickfont=dict(color="#2563eb"), overlaying="y", side="right"),
+            yaxis=dict(title=dict(text="SIP Inflow (Rs. Crore)", font=dict(color="#10b981")), tickfont=dict(color="#10b981")),
+            yaxis2=dict(title=dict(text="Nifty 50 Index Value", font=dict(color="#2563eb")), tickfont=dict(color="#2563eb"), overlaying="y", side="right"),
             legend=dict(x=0.05, y=0.95),
             margin=dict(l=20, r=20, t=30, b=20),
             height=400

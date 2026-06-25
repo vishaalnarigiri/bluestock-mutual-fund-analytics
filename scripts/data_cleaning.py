@@ -22,6 +22,12 @@ df_nav = pd.read_csv(os.path.join(raw_dir, "02_nav_history.csv"))
 df_nav["date"] = pd.to_datetime(df_nav["date"])
 df_nav["nav"] = pd.to_numeric(df_nav["nav"], errors='coerce')
 
+# Validate NAV > 0: Remove any row where NAV is <= 0 or missing
+invalid_nav = (df_nav["nav"] <= 0) | df_nav["nav"].isnull()
+if invalid_nav.any():
+    print(f"Removing {invalid_nav.sum()} rows with invalid NAV (<= 0 or null).")
+    df_nav = df_nav[~invalid_nav]
+
 # Forward fill missing NAV values on weekends/holidays for each scheme
 cleaned_nav_groups = []
 for amfi, group in df_nav.groupby("amfi_code"):
@@ -37,7 +43,15 @@ for amfi, group in df_nav.groupby("amfi_code"):
 df_nav_clean = pd.concat(cleaned_nav_groups, ignore_index=True)
 df_nav_clean["date"] = df_nav_clean["date"].dt.strftime('%Y-%m-%d')
 df_nav_clean.sort_values(by=["amfi_code", "date"], inplace=True)
+
+# Final validation check
+final_invalid_nav = df_nav_clean["nav"] <= 0
+if final_invalid_nav.any():
+    print(f"Warning: Found {final_invalid_nav.sum()} rows in final data where NAV <= 0. Removing.")
+    df_nav_clean = df_nav_clean[~final_invalid_nav]
+
 df_nav_clean.to_csv(os.path.join(processed_dir, "02_nav_history.csv"), index=False)
+
 
 # 3. Clean 03_aum_by_fund_house.csv
 print("Cleaning 03_aum_by_fund_house.csv...")
@@ -106,6 +120,13 @@ invalid_tx = df_tx["amount_inr"] <= 0
 if invalid_tx.any():
     print(f"Removing {invalid_tx.sum()} transactions with invalid amounts (<= 0).")
     df_tx = df_tx[~invalid_tx]
+
+# Standardize KYC status values to 'Verified' and 'Pending'
+kyc_map = {
+    "Verified": "Verified", "VERIFIED": "Verified", "verified": "Verified",
+    "Pending": "Pending", "PENDING": "Pending", "pending": "Pending"
+}
+df_tx["kyc_status"] = df_tx["kyc_status"].map(kyc_map).fillna("Pending")
 
 df_tx.to_csv(os.path.join(processed_dir, "08_investor_transactions.csv"), index=False)
 

@@ -1,8 +1,25 @@
 -- Bluestock Mutual Fund Database Schema
--- Normalised 8-table Star Schema for Fintech Analytics
+-- Normalised Star Schema for Fintech Analytics
+
+-- Drop tables in reverse dependency order to avoid foreign key conflicts
+DROP INDEX IF EXISTS idx_nav_amfi_date;
+DROP INDEX IF EXISTS idx_tx_amfi_date;
+DROP INDEX IF EXISTS idx_port_amfi;
+DROP INDEX IF EXISTS idx_bench_date;
+DROP TABLE IF EXISTS fact_nav;
+DROP TABLE IF EXISTS fact_transactions;
+DROP TABLE IF EXISTS fact_performance;
+DROP TABLE IF EXISTS fact_portfolio;
+DROP TABLE IF EXISTS fact_aum;
+DROP TABLE IF EXISTS fact_sip_industry;
+DROP TABLE IF EXISTS clean_benchmark_indices;
+DROP TABLE IF EXISTS fact_category_inflows;
+DROP TABLE IF EXISTS fact_industry_folios;
+DROP TABLE IF EXISTS dim_fund;
+DROP TABLE IF EXISTS dim_date;
 
 -- 1. Dimension: Fund Metadata
-CREATE TABLE IF NOT EXISTS dim_fund (
+CREATE TABLE dim_fund (
     amfi_code INTEGER PRIMARY KEY,
     fund_house TEXT NOT NULL,
     scheme_name TEXT NOT NULL,
@@ -21,7 +38,7 @@ CREATE TABLE IF NOT EXISTS dim_fund (
 );
 
 -- 2. Dimension: Date Calendar Lookup
-CREATE TABLE IF NOT EXISTS dim_date (
+CREATE TABLE dim_date (
     date TEXT PRIMARY KEY, -- 'YYYY-MM-DD'
     year INTEGER NOT NULL,
     month INTEGER NOT NULL,
@@ -31,7 +48,7 @@ CREATE TABLE IF NOT EXISTS dim_date (
 );
 
 -- 3. Fact: Daily Net Asset Value (NAV)
-CREATE TABLE IF NOT EXISTS fact_nav (
+CREATE TABLE fact_nav (
     amfi_code INTEGER,
     date TEXT,
     nav REAL NOT NULL,
@@ -42,7 +59,7 @@ CREATE TABLE IF NOT EXISTS fact_nav (
 );
 
 -- 4. Fact: Investor Transactions
-CREATE TABLE IF NOT EXISTS fact_transactions (
+CREATE TABLE fact_transactions (
     tx_id INTEGER PRIMARY KEY AUTOINCREMENT,
     investor_id TEXT NOT NULL,
     amfi_code INTEGER,
@@ -62,8 +79,12 @@ CREATE TABLE IF NOT EXISTS fact_transactions (
 );
 
 -- 5. Fact: Scheme Return and Risk Performance
-CREATE TABLE IF NOT EXISTS fact_performance (
+CREATE TABLE fact_performance (
     amfi_code INTEGER PRIMARY KEY,
+    scheme_name TEXT,
+    fund_house TEXT,
+    category TEXT,
+    plan TEXT,
     return_1yr_pct REAL,
     return_3yr_pct REAL,
     return_5yr_pct REAL,
@@ -74,12 +95,17 @@ CREATE TABLE IF NOT EXISTS fact_performance (
     sortino_ratio REAL,
     std_dev_ann_pct REAL,
     max_drawdown_pct REAL,
+    aum_crore INTEGER,
+    expense_ratio_pct REAL,
     morningstar_rating INTEGER,
+    risk_grade TEXT,
+    negative_sharpe_flag INTEGER,
+    expense_ratio_valid INTEGER,
     FOREIGN KEY (amfi_code) REFERENCES dim_fund(amfi_code)
 );
 
 -- 6. Fact: Fund Portfolio Holdings
-CREATE TABLE IF NOT EXISTS fact_portfolio (
+CREATE TABLE fact_portfolio (
     portfolio_id INTEGER PRIMARY KEY AUTOINCREMENT,
     amfi_code INTEGER,
     stock_symbol TEXT NOT NULL,
@@ -94,7 +120,7 @@ CREATE TABLE IF NOT EXISTS fact_portfolio (
 );
 
 -- 7. Fact: Quarterly Assets Under Management (AUM) by AMC
-CREATE TABLE IF NOT EXISTS fact_aum (
+CREATE TABLE fact_aum (
     aum_id INTEGER PRIMARY KEY AUTOINCREMENT,
     date TEXT NOT NULL,
     fund_house TEXT NOT NULL,
@@ -104,7 +130,7 @@ CREATE TABLE IF NOT EXISTS fact_aum (
 );
 
 -- 8. Fact: Monthly Industry SIP Inflow Trends
-CREATE TABLE IF NOT EXISTS fact_sip_industry (
+CREATE TABLE fact_sip_industry (
     month TEXT PRIMARY KEY, -- 'YYYY-MM'
     sip_inflow_crore REAL,
     active_sip_accounts_crore REAL,
@@ -113,7 +139,35 @@ CREATE TABLE IF NOT EXISTS fact_sip_industry (
     yoy_growth_pct REAL
 );
 
+-- 9. Fact: Clean Benchmark Indices
+CREATE TABLE clean_benchmark_indices (
+    date TEXT,
+    index_name TEXT,
+    close_value REAL,
+    PRIMARY KEY (date, index_name),
+    FOREIGN KEY (date) REFERENCES dim_date(date)
+);
+
+-- 10. Fact: Category Inflows
+CREATE TABLE fact_category_inflows (
+    month TEXT,
+    category TEXT,
+    net_inflow_crore REAL,
+    PRIMARY KEY (month, category)
+);
+
+-- 11. Fact: Industry Folio Counts
+CREATE TABLE fact_industry_folios (
+    month TEXT PRIMARY KEY,
+    total_folios_crore REAL,
+    equity_folios_crore REAL,
+    debt_folios_crore REAL,
+    hybrid_folios_crore REAL,
+    others_folios_crore REAL
+);
+
 -- Add indexes for fast lookup and join performance
 CREATE INDEX IF NOT EXISTS idx_nav_amfi_date ON fact_nav(amfi_code, date);
 CREATE INDEX IF NOT EXISTS idx_tx_amfi_date ON fact_transactions(amfi_code, transaction_date);
 CREATE INDEX IF NOT EXISTS idx_port_amfi ON fact_portfolio(amfi_code);
+CREATE INDEX IF NOT EXISTS idx_bench_date ON clean_benchmark_indices(date);

@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import os
+import shutil
 
 def run_script(script_name, cwd=None):
     script_path = os.path.join("scripts", script_name) if not cwd else script_name
@@ -13,6 +14,62 @@ def run_script(script_name, cwd=None):
         print(f"Error: {script_name} failed with exit code {result.returncode}.")
         sys.exit(result.returncode)
     print(f"Completed {script_name} successfully.\n")
+
+def sync_submission_folder():
+    print("=" * 80)
+    print("Syncing updated files to vishaalnarigiri7745_submission folder...")
+    print("=" * 80)
+    
+    sub_dir = "/Users/vaishnavnarigiri/Desktop/bluestock/vishaalnarigiri7745_submission"
+    
+    # 1. Sync Cleaned Datasets
+    dest_clean_data = os.path.join(sub_dir, "Datasets", "Cleaned_Data")
+    os.makedirs(dest_clean_data, exist_ok=True)
+    for item in os.listdir("data/processed"):
+        src_path = os.path.join("data/processed", item)
+        if os.path.isfile(src_path):
+            shutil.copy2(src_path, dest_clean_data)
+            
+    # 2. Sync Documentation
+    dest_doc = os.path.join(sub_dir, "Documentation")
+    os.makedirs(dest_doc, exist_ok=True)
+    if os.path.exists("reports/Project_Report.pdf"):
+        shutil.copy2("reports/Project_Report.pdf", dest_doc)
+    if os.path.exists("reports/data_quality_summary.md"):
+        shutil.copy2("reports/data_quality_summary.md", dest_doc)
+    if os.path.exists("data_dictionary.md"):
+        shutil.copy2("data_dictionary.md", dest_doc)
+        
+    # 3. Sync PowerPoint
+    dest_ppt = os.path.join(sub_dir, "PPT_Slides")
+    os.makedirs(dest_ppt, exist_ok=True)
+    if os.path.exists("reports/Presentation.pptx"):
+        shutil.copy2("reports/Presentation.pptx", dest_ppt)
+        
+    # 4. Sync Source Code
+    dest_src = os.path.join(sub_dir, "Source_Code")
+    # Clean and sync dashboard
+    if os.path.exists(os.path.join(dest_src, "dashboard")):
+        shutil.rmtree(os.path.join(dest_src, "dashboard"))
+    shutil.copytree("dashboard", os.path.join(dest_src, "dashboard"))
+    
+    # Clean and sync scripts
+    if os.path.exists(os.path.join(dest_src, "scripts")):
+        shutil.rmtree(os.path.join(dest_src, "scripts"))
+    shutil.copytree("scripts", os.path.join(dest_src, "scripts"))
+    
+    # Clean and sync sql
+    if os.path.exists(os.path.join(dest_src, "sql")):
+        shutil.rmtree(os.path.join(dest_src, "sql"))
+    shutil.copytree("sql", os.path.join(dest_src, "sql"))
+    
+    # Sync files
+    files_to_copy = ["run_pipeline.py", "requirements.txt", "data_ingestion.py", "live_nav_fetch.py", "README.md"]
+    for file in files_to_copy:
+        if os.path.exists(file):
+            shutil.copy2(file, dest_src)
+            
+    print("Synchronization to vishaalnarigiri7745_submission completed successfully.\n")
 
 if __name__ == "__main__":
     print("=" * 80)
@@ -37,6 +94,9 @@ if __name__ == "__main__":
     # 6. Generate final PPT presentation
     run_script("generate_presentation.py")
     
+    # 7. Synchronize updated files to submission directory
+    sync_submission_folder()
+    
     print("=" * 80)
     print("ETL PIPELINE RUN COMPLETED SUCCESSFULLY!")
     print("All deliverables generated:")
@@ -45,4 +105,5 @@ if __name__ == "__main__":
     print(" - Advanced Reports: cohort_analysis.csv, sip_continuity.csv, sector_hhi.csv")
     print(" - PDF Report: reports/Project_Report.pdf")
     print(" - Presentation slides: reports/Presentation.pptx")
+    print(" - Submission sync folder: vishaalnarigiri7745_submission/")
     print("=" * 80)

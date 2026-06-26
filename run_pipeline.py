@@ -63,6 +63,17 @@ def sync_submission_folder():
         shutil.rmtree(os.path.join(dest_src, "sql"))
     shutil.copytree("sql", os.path.join(dest_src, "sql"))
     
+    # Clean and sync notebooks
+    if os.path.exists(os.path.join(dest_src, "notebooks")):
+        shutil.rmtree(os.path.join(dest_src, "notebooks"))
+    shutil.copytree("notebooks", os.path.join(dest_src, "notebooks"))
+    
+    # Clean and sync charts under Documentation
+    dest_charts = os.path.join(sub_dir, "Documentation", "charts")
+    if os.path.exists(dest_charts):
+        shutil.rmtree(dest_charts)
+    shutil.copytree("reports/charts", dest_charts)
+    
     # Sync files
     files_to_copy = ["run_pipeline.py", "requirements.txt", "data_ingestion.py", "live_nav_fetch.py", "README.md"]
     for file in files_to_copy:
@@ -70,7 +81,7 @@ def sync_submission_folder():
             shutil.copy2(file, dest_src)
             
     print("Synchronization to vishaalnarigiri7745_submission completed successfully.\n")
-
+ 
 if __name__ == "__main__":
     print("=" * 80)
     print("BLUESTOCK MUTUAL FUND CAPSTONE: FULL DATA ENGINEERING & ETL PIPELINE")
@@ -87,6 +98,9 @@ if __name__ == "__main__":
     
     # 4. Run advanced risk analytics
     run_script("advanced_analytics.py")
+    
+    # 4b. Generate EDA analysis notebook and charts
+    run_script("generate_eda.py")
     
     # 5. Generate final PDF report
     run_script("generate_pdf_report.py")

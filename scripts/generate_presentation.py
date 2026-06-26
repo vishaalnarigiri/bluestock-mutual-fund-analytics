@@ -165,46 +165,106 @@ def create_presentation():
         "Compliance volumes verified (KYC verified vs pending split)."
     ], width=Inches(8.5))
 
-    # --- SLIDE 8: EDA VISUALIZATIONS ---
+    # --- SLIDE 8: NAV TRENDS & AUM GROWTH ---
     slide = prs.slides.add_slide(slide_layout)
-    add_slide_header(slide, "EDA: NAV Trends & Market Growth")
+    add_slide_header(slide, "EDA: NAV Trends & AUM Growth")
     add_bullet_content(slide, [
-        "NAV Historical Movement:",
-        "• Solid post-2023 rally seen across Large Cap schemes.",
-        "AMC AUM comparison:",
-        "• SBI MF leads, followed by ICICI Pru and HDFC MF.",
-        "Category Heatmap:",
-        "• Net inflows heavily concentrate in Liquid cash funds."
+        "Historical NAV Trends:",
+        "• Visualizes daily NAV for all 40 schemes (2022-2026).",
+        "• Highlights the 2023 Bull Run and 2024 Corrections.",
+        "Assets Under Management Progression:",
+        "• Tracks average yearly AUM by fund house.",
+        "• Highlights SBI MF's dominance, touching ₹12.5L Cr in 2025."
     ], width=Inches(4.5))
     
-    # Embed NAV Trends chart
     nav_trends_path = os.path.join(charts_dir, "nav_trends.png")
     if os.path.exists(nav_trends_path):
-        slide.shapes.add_picture(nav_trends_path, Inches(5.0), Inches(1.3), Inches(4.5), Inches(2.6))
+        slide.shapes.add_picture(nav_trends_path, Inches(5.2), Inches(1.3), Inches(4.3), Inches(2.6))
         
     aum_path = os.path.join(charts_dir, "aum_growth.png")
     if os.path.exists(aum_path):
-        slide.shapes.add_picture(aum_path, Inches(5.0), Inches(4.0), Inches(4.5), Inches(2.6))
+        slide.shapes.add_picture(aum_path, Inches(5.2), Inches(4.2), Inches(4.3), Inches(2.6))
+
+    # --- SLIDE 8b: SIP INFLOWS & CATEGORY HEATMAP ---
+    slide = prs.slides.add_slide(slide_layout)
+    add_slide_header(slide, "EDA: Inflows & Category Heatmap")
+    add_bullet_content(slide, [
+        "Monthly Systematic Investment Plans (SIP):",
+        "• Robust growth in retail industry SIP inflows.",
+        "• Peaked at an all-time high of ₹31,002 Cr in Dec 2025.",
+        "Category Net Inflows Heatmap:",
+        "• Reveals net inflow distribution across 12 fund categories.",
+        "• Highlights Liquid funds as dominant short-term cash reserves."
+    ], width=Inches(4.5))
+    
+    sip_path = os.path.join(charts_dir, "sip_inflows.png")
+    if os.path.exists(sip_path):
+        slide.shapes.add_picture(sip_path, Inches(5.2), Inches(1.3), Inches(4.3), Inches(2.6))
+        
+    heatmap_path = os.path.join(charts_dir, "category_inflow_heatmap.png")
+    if os.path.exists(heatmap_path):
+        slide.shapes.add_picture(heatmap_path, Inches(5.2), Inches(4.2), Inches(4.3), Inches(2.6))
 
     # --- SLIDE 9: INVESTOR DEMOGRAPHICS ---
     slide = prs.slides.add_slide(slide_layout)
-    add_slide_header(slide, "EDA: Investor Segmentation")
+    add_slide_header(slide, "EDA: Investor Segmentation & Demographics")
     add_bullet_content(slide, [
-        "Age Group Splits:",
-        "• 26-35 age bracket dominates active count (36%).",
-        "Geographic analysis:",
-        "• Punjab, Tamil Nadu and Rajasthan have top SIP volumes.",
-        "Folio Expansion:",
-        "• Total folios doubled from 13.26 Cr (2022) to 26.12 Cr (2025)."
+        "Age splits: 26-35 bracket dominates (36% count).",
+        "Ticket sizes: 46-55 group displays the highest average SIP amount.",
+        "Gender split: Men contribute ~66% vs. Women ~34% of total investments."
+    ], left=Inches(0.5), top=Inches(1.2), width=Inches(9.0), height=Inches(2.5), font_size=15)
+    
+    age_path = os.path.join(charts_dir, "investor_age_pie.png")
+    if os.path.exists(age_path):
+        slide.shapes.add_picture(age_path, Inches(0.5), Inches(4.0), Inches(2.8), Inches(2.5))
+        
+    box_path = os.path.join(charts_dir, "investor_sip_boxplot.png")
+    if os.path.exists(box_path):
+        slide.shapes.add_picture(box_path, Inches(3.6), Inches(4.0), Inches(2.8), Inches(2.5))
+        
+    gender_path = os.path.join(charts_dir, "investor_gender_split.png")
+    if os.path.exists(gender_path):
+        slide.shapes.add_picture(gender_path, Inches(6.7), Inches(4.0), Inches(2.8), Inches(2.5))
+
+    # --- SLIDE 9b: GEOGRAPHIC & CITY TIER SPLITS ---
+    slide = prs.slides.add_slide(slide_layout)
+    add_slide_header(slide, "EDA: Geographic & City Tier Analysis")
+    add_bullet_content(slide, [
+        "State SIP Inflows:",
+        "• Madhya Pradesh, Punjab and Telangana lead active SIP amounts.",
+        "• Reflects growing wealth in tier-2/3 state capitals.",
+        "T30 vs. B30 City Tier splits:",
+        "• Top 30 (T30) cities still hold the lion's share of investments (66%).",
+        "• Beyond-30 (B30) cities represent a massive growth opportunity (34%)."
     ], width=Inches(4.5))
     
-    demo_path = os.path.join(charts_dir, "investor_demographics.png")
-    if os.path.exists(demo_path):
-        slide.shapes.add_picture(demo_path, Inches(5.0), Inches(1.3), Inches(4.5), Inches(2.6))
+    geo_state_path = os.path.join(charts_dir, "geo_state_sip.png")
+    if os.path.exists(geo_state_path):
+        slide.shapes.add_picture(geo_state_path, Inches(5.2), Inches(1.3), Inches(4.3), Inches(2.6))
         
-    geo_path = os.path.join(charts_dir, "geo_distribution.png")
-    if os.path.exists(geo_path):
-        slide.shapes.add_picture(geo_path, Inches(5.0), Inches(4.0), Inches(4.5), Inches(2.6))
+    geo_tier_path = os.path.join(charts_dir, "geo_tier_pie.png")
+    if os.path.exists(geo_tier_path):
+        slide.shapes.add_picture(geo_tier_path, Inches(5.2), Inches(4.2), Inches(4.3), Inches(2.6))
+
+    # --- SLIDE 9c: FOLIO GROWTH & SECTOR DONUT ---
+    slide = prs.slides.add_slide(slide_layout)
+    add_slide_header(slide, "EDA: Folio Progression & Sector Weights")
+    add_bullet_content(slide, [
+        "Folio Expansion:",
+        "• Doubled from 13.26 Cr (Jan 2022) to 26.12 Cr (Dec 2025).",
+        "• Crossed the 20 Crore milestone in July 2024.",
+        "Sector Weights Allocation (Equity Donut):",
+        "• High concentration in Financial Services (> 25%).",
+        "• Reflects major benchmarks (Nifty 50/Nifty 100) sector dominance."
+    ], width=Inches(4.5))
+    
+    folio_path = os.path.join(charts_dir, "folio_growth_milestones.png")
+    if os.path.exists(folio_path):
+        slide.shapes.add_picture(folio_path, Inches(5.2), Inches(1.3), Inches(4.3), Inches(2.6))
+        
+    sector_donut_path = os.path.join(charts_dir, "sector_allocation_donut.png")
+    if os.path.exists(sector_donut_path):
+        slide.shapes.add_picture(sector_donut_path, Inches(5.2), Inches(4.2), Inches(4.3), Inches(2.6))
 
     # --- SLIDE 10: PERFORMANCE METRICS ---
     slide = prs.slides.add_slide(slide_layout)

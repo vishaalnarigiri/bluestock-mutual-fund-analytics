@@ -232,41 +232,42 @@ def build_pdf():
     # --- SECTION 3: EDA ---
     story.append(Paragraph("3. Exploratory Data Analysis (EDA)", h1_style))
     story.append(Paragraph(
-        "A deep Exploratory Data Analysis was carried out using Matplotlib and Seaborn. Charts were generated to understand market behavior, "
-        "AUM distributions, investor demographics, and systemic transaction patterns.",
+        "A detailed Exploratory Data Analysis was carried out. We generated 16 custom charts "
+        "to inspect historical NAV progression, AUM growth, monthly SIP inflows, and investor "
+        "demographic, geographic, and folio attributes.",
         body_style
     ))
     
-    # Insert charts with text descriptions
-    charts = [
-        ("nav_trends.png", "Figure 3.1: NAV Historical trends for large cap schemes showing clear post-2023 rallies."),
-        ("aum_growth.png", "Figure 3.2: Assets Under Management growth by AMC, highlighting SBI MF's dominant position."),
-        ("sip_inflows.png", "Figure 3.3: Systematic Investment Inflows demonstrating the record ₹31,002 Cr in Dec 2025."),
-        ("category_inflow_heatmap.png", "Figure 3.4: Category Inflows intensity heatmap across Large Cap, Small Cap, and Liquid funds.")
+    # 16 Charts grouped in pairs (2 per page)
+    all_charts = [
+        ("nav_trends.png", "Figure 3.1: Daily NAV trends for all 40 schemes (2022-2026), highlighting market correction and bull run phases."),
+        ("aum_growth.png", "Figure 3.2: Assets Under Management growth by AMC, highlighting SBI MF's ₹12.5L Cr dominance in 2025."),
+        ("sip_inflows.png", "Figure 3.3: Systematic Investment Plan monthly trend, highlighting the ₹31,002 Cr peak in Dec 2025."),
+        ("category_inflow_heatmap.png", "Figure 3.4: Net inflows intensity heatmap across mutual fund categories."),
+        ("investor_age_pie.png", "Figure 3.5: Investor age group distribution, highlighting the dominance of the 26-35 age bracket."),
+        ("investor_sip_boxplot.png", "Figure 3.6: SIP transaction amount distribution box plots grouped by age cohort."),
+        ("investor_gender_split.png", "Figure 3.7: Total invested volume split by investor gender."),
+        ("geo_state_sip.png", "Figure 3.8: State-wise total active SIP investment volume."),
+        ("geo_tier_pie.png", "Figure 3.9: Total investment volume split by city tier (T30 vs B30)."),
+        ("folio_growth_milestones.png", "Figure 3.10: Total mutual fund folio count progression, highlighting milestones from 13.26 Cr to 26.12 Cr."),
+        ("folio_growth_breakdown.png", "Figure 3.11: Folio count growth breakdown stacked by asset class (2022-2025)."),
+        ("correlation_matrix.png", "Figure 3.12: Pairwise daily returns correlation matrix of top 10 mutual funds."),
+        ("sector_allocation_donut.png", "Figure 3.13: Donut chart displaying aggregate sector weight allocation across equity schemes."),
+        ("payment_mode_split.png", "Figure 3.14: Transaction volume count by payment mode and type."),
+        ("kyc_status_age_split.png", "Figure 3.15: KYC verification status distribution across age groups."),
+        ("category_expense_ratio.png", "Figure 3.16: Average expense ratio (%) comparison across fund categories.")
     ]
     
-    for filename, caption in charts:
+    for i, (filename, caption) in enumerate(all_charts):
         img_path = os.path.join(charts_dir, filename)
         if os.path.exists(img_path):
             story.append(Image(img_path, width=5.5*inch, height=2.8*inch))
-            story.append(Paragraph(f"<i>{caption}</i>", ParagraphStyle('Caption', parent=styles['Normal'], fontSize=8.5, textColor=colors.HexColor("#475569"), alignment=1)))
+            story.append(Paragraph(f"<i>{caption}</i>", ParagraphStyle(f'Caption_{i}', parent=styles['Normal'], fontSize=8.5, textColor=colors.HexColor("#475569"), alignment=1)))
             story.append(Spacer(1, 15))
-            
-    story.append(PageBreak())
-    
-    # Part 2 of EDA charts
-    more_charts = [
-        ("investor_demographics.png", "Figure 3.5: Investor demographics split by age brackets and transaction amount boxes."),
-        ("geo_distribution.png", "Figure 3.6: Geographic distribution of total SIP investment amounts across Indian states."),
-        ("folio_growth.png", "Figure 3.7: Rapid expansion of mutual fund folios driven by equity products."),
-        ("correlation_matrix.png", "Figure 3.8: High returns correlation coefficient (> 0.85) between major large-cap schemes.")
-    ]
-    for filename, caption in more_charts:
-        img_path = os.path.join(charts_dir, filename)
-        if os.path.exists(img_path):
-            story.append(Image(img_path, width=5.5*inch, height=2.8*inch))
-            story.append(Paragraph(f"<i>{caption}</i>", ParagraphStyle('Caption2', parent=styles['Normal'], fontSize=8.5, textColor=colors.HexColor("#475569"), alignment=1)))
-            story.append(Spacer(1, 15))
+        
+        # Add PageBreak after every 2 charts
+        if (i + 1) % 2 == 0 and (i + 1) < len(all_charts):
+            story.append(PageBreak())
             
     story.append(PageBreak())
     

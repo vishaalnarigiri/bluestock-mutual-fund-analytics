@@ -55,13 +55,13 @@ def sync_submission_folder():
 
         
     # 3. Sync PowerPoint
-    dest_ppt = os.path.join(sub_dir, "PPT_Slides")
+    dest_ppt = os.path.join(sub_dir, "PPT Slides")
     os.makedirs(dest_ppt, exist_ok=True)
     if os.path.exists("reports/Presentation.pptx"):
         shutil.copy2("reports/Presentation.pptx", dest_ppt)
         
     # 4. Sync Source Code
-    dest_src = os.path.join(sub_dir, "Source_Code")
+    dest_src = os.path.join(sub_dir, "Source Code")
     # Clean and sync dashboard
     if os.path.exists(os.path.join(dest_src, "dashboard")):
         shutil.rmtree(os.path.join(dest_src, "dashboard"))
@@ -93,6 +93,18 @@ def sync_submission_folder():
     for file in files_to_copy:
         if os.path.exists(file):
             shutil.copy2(file, dest_src)
+            
+    # Sync Demo Video and cleanup old underscore folders
+    dest_demo_video = os.path.join(sub_dir, "Demo Video")
+    os.makedirs(dest_demo_video, exist_ok=True)
+    old_demo_path = os.path.join(sub_dir, "Demo_Video")
+    if os.path.exists(os.path.join(old_demo_path, "Project_Demo.webp")):
+        shutil.copy2(os.path.join(old_demo_path, "Project_Demo.webp"), dest_demo_video)
+        
+    for old_folder in ["Source_Code", "PPT_Slides", "Demo_Video"]:
+        old_path = os.path.join(sub_dir, old_folder)
+        if os.path.exists(old_path):
+            shutil.rmtree(old_path)
             
     print("Synchronization to vishaalnarigiri7745_submission completed successfully.\n")
  

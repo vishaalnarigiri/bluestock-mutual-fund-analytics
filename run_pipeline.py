@@ -42,6 +42,18 @@ def sync_submission_folder():
     if os.path.exists("data_dictionary.md"):
         shutil.copy2("data_dictionary.md", dest_doc)
         
+    # 2b. Sync PDF folder (in root and submission)
+    root_pdf_dir = "/Users/vaishnavnarigiri/Desktop/bluestock/pdf"
+    sub_pdf_dir = os.path.join(sub_dir, "pdf")
+    os.makedirs(root_pdf_dir, exist_ok=True)
+    os.makedirs(sub_pdf_dir, exist_ok=True)
+    for pdf_file in ["Project_Report.pdf", "Dashboard.pdf"]:
+        src_pdf = os.path.join("reports", pdf_file)
+        if os.path.exists(src_pdf):
+            shutil.copy2(src_pdf, root_pdf_dir)
+            shutil.copy2(src_pdf, sub_pdf_dir)
+
+        
     # 3. Sync PowerPoint
     dest_ppt = os.path.join(sub_dir, "PPT_Slides")
     os.makedirs(dest_ppt, exist_ok=True)

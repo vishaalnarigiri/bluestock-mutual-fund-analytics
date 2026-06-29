@@ -143,6 +143,29 @@ selected_amc = st.sidebar.multiselect("Select Asset Management Company (AMC)", a
 selected_cat = st.sidebar.multiselect("Select Fund Category", categories, default=[])
 selected_risk = st.sidebar.multiselect("Select Risk Level", risk_grades, default=[])
 
+# Demographic filters for Page 3
+selected_state = []
+selected_age = []
+selected_city = []
+
+@st.cache_data
+def load_investor_demographics():
+    conn = get_connection()
+    states = [r[0] for r in conn.execute("SELECT DISTINCT state FROM fact_transactions WHERE state IS NOT NULL AND state != ''").fetchall()]
+    age_groups = [r[0] for r in conn.execute("SELECT DISTINCT age_group FROM fact_transactions WHERE age_group IS NOT NULL AND age_group != ''").fetchall()]
+    city_tiers = [r[0] for r in conn.execute("SELECT DISTINCT city_tier FROM fact_transactions WHERE city_tier IS NOT NULL AND city_tier != ''").fetchall()]
+    conn.close()
+    return sorted(states), sorted(age_groups), sorted(city_tiers)
+
+if page == "Investor Analytics":
+    st.sidebar.markdown("---")
+    st.sidebar.header("Investor Demographic Slicers")
+    states, age_groups, city_tiers = load_investor_demographics()
+    selected_state = st.sidebar.multiselect("Select State", states, default=[])
+    selected_age = st.sidebar.multiselect("Select Age Group", age_groups, default=[])
+    selected_city = st.sidebar.multiselect("Select City Tier", city_tiers, default=[])
+
+
 # Apply filters helper
 def filter_df(df):
     filtered_df = df.copy()
@@ -337,15 +360,45 @@ elif page == "Investor Analytics":
     
     df_tx_filtered = df_tx[df_tx["amfi_code"].isin(valid_amfi)].copy()
     
+    # Apply demographic slicers
+    if selected_state:
+        df_tx_filtered = df_tx_filtered[df_tx_filtered["state"].isin(selected_state)]
+    if selected_age:
+        df_tx_filtered = df_tx_filtered[df_tx_filtered["age_group"].isin(selected_age)]
+    if selected_city:
+        df_tx_filtered = df_tx_filtered[df_tx_filtered["city_tier"].isin(selected_city)]
+        
     if df_tx_filtered.empty:
-        st.warning("No transactions match the selected global filters. Adjust the filters in the sidebar.")
+        st.warning("No transactions match the selected global or demographic filters. Adjust the filters in the sidebar.")
     else:
-        col1, col2, col3 = st.columns(3)
+        # Top KPI Cards
+        st.markdown(f"""
+        <div style="display: flex; gap: 1.5rem; margin-bottom: 2rem;">
+            <div class="kpi-card" style="border-left: 5px solid #10b981;">
+                <div class="kpi-label">Filtered Transaction Amount</div>
+                <div class="kpi-value">₹{df_tx_filtered['amount_inr'].sum()/1e7:.2f} Cr</div>
+                <div class="kpi-subtext">Total Value of Selected Cohort</div>
+            </div>
+            <div class="kpi-card" style="border-left: 5px solid #3b82f6;">
+                <div class="kpi-label">Selected Transactions</div>
+                <div class="kpi-value">{len(df_tx_filtered):,}</div>
+                <div class="kpi-subtext">Count of Individual Transactions</div>
+            </div>
+            <div class="kpi-card" style="border-left: 5px solid #8b5cf6;">
+                <div class="kpi-label">Unique Investors</div>
+                <div class="kpi-value">{df_tx_filtered['investor_id'].nunique():,}</div>
+                <div class="kpi-subtext">Active Customers Under Filters</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        col1, col2 = st.columns(2)
         with col1:
             st.subheader("Geographical Distribution (State-wise Volume)")
             state_vol = df_tx_filtered.groupby("state")["amount_inr"].sum().reset_index()
             state_vol = state_vol.sort_values(by="amount_inr", ascending=False)
-            fig_state = px.bar(state_vol, x="state", y="amount_inr", color="amount_inr", color_continuous_scale="Tealgrn")
+            fig_state = px.bar(state_vol, x="state", y="amount_inr", color="amount_inr", color_continuous_scale="Tealgrn",
+                               labels={"amount_inr": "Total Invested (INR)", "state": "State"})
             fig_state.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=350, showlegend=False)
             st.plotly_chart(fig_state, use_container_width=True)
             
@@ -357,13 +410,30 @@ elif page == "Investor Analytics":
             fig_donut.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=350)
             st.plotly_chart(fig_donut, use_container_width=True)
             
+        col3, col4 = st.columns(2)
         with col3:
-            st.subheader("Average Investment by Age Group")
-            age_avg = df_tx_filtered.groupby("age_group")["amount_inr"].mean().reset_index()
-            fig_age = px.bar(age_avg, x="age_group", y="amount_inr", color="age_group",
-                             color_discrete_sequence=px.colors.qualitative.G10)
-            fig_age.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=350, showlegend=False)
-            st.plotly_chart(fig_age, use_container_width=True)
+            st.subheader("Age Group vs. Average SIP Amount")
+            df_sip_only = df_tx_filtered[df_tx_filtered["transaction_type"] == "SIP"]
+            if df_sip_only.empty:
+                st.info("No SIP transactions available for the selected filters.")
+            else:
+                age_avg = df_sip_only.groupby("age_group")["amount_inr"].mean().reset_index()
+                fig_age = px.bar(age_avg, x="age_group", y="amount_inr", color="age_group",
+                                 labels={"amount_inr": "Average SIP Amount (INR)", "age_group": "Age Group"},
+                                 color_discrete_sequence=px.colors.qualitative.G10)
+                fig_age.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=350, showlegend=False)
+                st.plotly_chart(fig_age, use_container_width=True)
+                
+        with col4:
+            st.subheader("Monthly Transaction Volume Trend")
+            df_tx_filtered["month"] = pd.to_datetime(df_tx_filtered["transaction_date"]).dt.strftime('%Y-%m')
+            tx_vol = df_tx_filtered.groupby("month")["tx_id"].count().reset_index().rename(columns={"tx_id": "volume"}).sort_values("month")
+            
+            fig_vol = px.line(tx_vol, x="month", y="volume", markers=True,
+                              labels={"volume": "Transaction Count", "month": "Month"},
+                              color_discrete_sequence=["#ef4444"])
+            fig_vol.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=350)
+            st.plotly_chart(fig_vol, use_container_width=True)
 
 # ----------------- PAGE 4: SIP & Market Trends -----------------
 elif page == "SIP & Market Trends":
@@ -437,3 +507,38 @@ elif page == "SIP & Market Trends":
             )
             fig_heatmap.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=400)
             st.plotly_chart(fig_heatmap, use_container_width=True)
+            
+    st.markdown("---")
+    col_bottom1, col_bottom2 = st.columns([1, 2])
+    with col_bottom1:
+        st.subheader("Top 5 Categories by Net Inflow (FY25)")
+        # Sum of net inflows during FY25 (Apr 2024 to Mar 2025)
+        fy25_months = ["2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09",
+                       "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03"]
+        df_cat_fy25 = df_cat[df_cat["month"].isin(fy25_months)]
+        if df_cat_fy25.empty:
+            df_cat_fy25 = df_cat.copy()
+            
+        cat_totals = df_cat_fy25.groupby("category")["net_inflow_crore"].sum().reset_index()
+        top_5_cats = cat_totals.sort_values(by="net_inflow_crore", ascending=False).head(5)
+        
+        fig_top5 = px.bar(top_5_cats, x="net_inflow_crore", y="category", orientation="h",
+                          labels={"net_inflow_crore": "Net Inflow (Rs. Cr)", "category": "Category"},
+                          color="net_inflow_crore", color_continuous_scale="Greens")
+        fig_top5.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=350, showlegend=False)
+        st.plotly_chart(fig_top5, use_container_width=True)
+        
+    with col_bottom2:
+        st.subheader("Monthly SIP Inflows Table")
+        st.dataframe(
+            df_sip.sort_values(by="month", ascending=False).style.format({
+                "sip_inflow_crore": "₹{:,.0f} Cr",
+                "active_sip_accounts_crore": "{:.2f} Cr",
+                "new_sip_accounts_lakh": "{:.2f} L",
+                "sip_aum_lakh_crore": "₹{:.2f} L Cr",
+                "yoy_growth_pct": "{:.1f}%"
+            }),
+            use_container_width=True,
+            height=350
+        )
+

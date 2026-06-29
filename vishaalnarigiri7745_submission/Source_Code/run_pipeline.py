@@ -35,6 +35,8 @@ def sync_submission_folder():
     os.makedirs(dest_doc, exist_ok=True)
     if os.path.exists("reports/Project_Report.pdf"):
         shutil.copy2("reports/Project_Report.pdf", dest_doc)
+    if os.path.exists("reports/Dashboard.pdf"):
+        shutil.copy2("reports/Dashboard.pdf", dest_doc)
     if os.path.exists("reports/data_quality_summary.md"):
         shutil.copy2("reports/data_quality_summary.md", dest_doc)
     if os.path.exists("data_dictionary.md"):
@@ -96,6 +98,9 @@ if __name__ == "__main__":
     # 3. Calculate metrics and scorecard
     run_script("compute_metrics.py")
     
+    # 3b. Generate performance plots
+    run_script("generate_performance_plots.py")
+    
     # 4. Run advanced risk analytics
     run_script("advanced_analytics.py")
     
@@ -108,6 +113,9 @@ if __name__ == "__main__":
     # 6. Generate final PPT presentation
     run_script("generate_presentation.py")
     
+    # 6b. Capture dashboard screenshots and PDF
+    run_script("capture_screenshots.py")
+    
     # 7. Synchronize updated files to submission directory
     sync_submission_folder()
     
@@ -116,8 +124,21 @@ if __name__ == "__main__":
     print("All deliverables generated:")
     print(" - SQLite Database: db/bluestock_mf.db")
     print(" - Fund Scorecard: data/processed/fund_scorecard.csv")
-    print(" - Advanced Reports: cohort_analysis.csv, sip_continuity.csv, sector_hhi.csv")
-    print(" - PDF Report: reports/Project_Report.pdf")
-    print(" - Presentation slides: reports/Presentation.pptx")
+    print(" - Alpha & Beta vs Nifty 100: data/processed/alpha_beta.csv")
+    print(" - Tracking Errors: data/processed/tracking_error.csv")
+    # Write a note about the Streamlit interactive dashboard replacing PBIX
+    pbix_readme_path = "/Users/vaishnavnarigiri/Desktop/bluestock/vishaalnarigiri7745_submission/README_interactive_dashboard.txt"
+    with open(pbix_readme_path, "w") as f:
+        f.write("Bluestock Capstone Mutual Fund Analytics Dashboard:\n")
+        f.write("The interactive dashboard is implemented using Streamlit instead of Power BI.\n")
+        f.write("Source code can be found in Source_Code/dashboard/app.py.\n")
+        f.write("To run the interactive dashboard, install requirements and execute:\n")
+        f.write("    streamlit run Source_Code/dashboard/app.py\n")
+        f.write("PDF export is available at Documentation/Dashboard.pdf.\n")
+        f.write("Page screenshots are located in Documentation/charts/Page*.png.\n")
+    print(" - Interactive Dashboard Note: README_interactive_dashboard.txt")
+    print(" - PDF Dashboard Report: Documentation/Dashboard.pdf")
+    print(" - Dashboard screenshots: Documentation/charts/Page*.png")
     print(" - Submission sync folder: vishaalnarigiri7745_submission/")
     print("=" * 80)
+

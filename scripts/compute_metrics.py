@@ -104,20 +104,57 @@ for idx, fund in df_funds.iterrows():
     downside_std_ann = negative_returns.std() * np.sqrt(252.0)
     sortino = (ann_return - RF_RATE) / downside_std_ann if downside_std_ann > 0 else 0.0
     
-    # Max Drawdown
+    # Max Drawdown & Date Range
     fund_nav["running_max"] = fund_nav["nav"].cummax()
     fund_nav["drawdown"] = (fund_nav["nav"] - fund_nav["running_max"]) / fund_nav["running_max"]
     max_dd = fund_nav["drawdown"].min()
     
-    # Alpha & Beta vs Index
+    if not fund_nav.empty and max_dd < 0:
+        trough_idx = fund_nav["drawdown"].idxmin()
+        trough_row = fund_nav.loc[trough_idx]
+        trough_date = trough_row["date"].strftime('%Y-%m-%d') if hasattr(trough_row["date"], 'strftime') else str(trough_row["date"])
+        
+        # Peak date is the date of the running max at the trough
+        peak_val = fund_nav.loc[trough_idx, "running_max"]
+        peak_df = fund_nav[(fund_nav["date"] <= trough_row["date"]) & (fund_nav["nav"] == peak_val)]
+        if not peak_df.empty:
+            peak_date = peak_df.iloc[-1]["date"]
+            peak_date = peak_date.strftime('%Y-%m-%d') if hasattr(peak_date, 'strftime') else str(peak_date)
+        else:
+            peak_date = fund_nav.iloc[0]["date"]
+            peak_date = peak_date.strftime('%Y-%m-%d') if hasattr(peak_date, 'strftime') else str(peak_date)
+            
+        # Recovery date is the first date after trough where NAV >= peak_val
+        recovery_df = fund_nav[(fund_nav["date"] > trough_row["date"]) & (fund_nav["nav"] >= peak_val)]
+        if not recovery_df.empty:
+            rec_date = recovery_df.iloc[0]["date"]
+            recovery_date = rec_date.strftime('%Y-%m-%d') if hasattr(rec_date, 'strftime') else str(rec_date)
+        else:
+            recovery_date = "Not Recovered"
+    else:
+        peak_date = "N/A"
+        trough_date = "N/A"
+        recovery_date = "N/A"
+        
+    # Alpha & Beta vs Nifty 100 (specifically NIFTY100 index returns)
+    aligned_df_nifty = pd.merge(fund_nav[["date", "daily_return"]], bench_pivot[["NIFTY100"]], left_on="date", right_index=True)
+    if len(aligned_df_nifty) > 10:
+        slope_n, intercept_n, r_val_n, p_val_n, std_err_n = linregress(aligned_df_nifty["NIFTY100"], aligned_df_nifty["daily_return"])
+        beta_nifty = slope_n
+        alpha_nifty = intercept_n * 252.0  # Annualise
+        r_squared_nifty = r_val_n ** 2
+    else:
+        beta_nifty = 1.0
+        alpha_nifty = 0.0
+        r_squared_nifty = 0.0
+
+    # Also compute Alpha & Beta vs fund's specific mapped benchmark (for dashboard backwards compatibility)
     mapped_bench = benchmark_mapping.get(bench_name, "NIFTY100")
-    # Align fund and benchmark returns
     aligned_df = pd.merge(fund_nav[["date", "daily_return"]], bench_pivot[[mapped_bench]], left_on="date", right_index=True)
-    
     if len(aligned_df) > 10:
         slope, intercept, r_val, p_val, std_err = linregress(aligned_df[mapped_bench], aligned_df["daily_return"])
         beta = slope
-        alpha = intercept * 252.0 # Annualise alpha
+        alpha = intercept * 252.0
     else:
         beta = 1.0
         alpha = 0.0
@@ -147,12 +184,17 @@ for idx, fund in df_funds.iterrows():
         "sharpe_ratio": sharpe,
         "sortino_ratio": sortino,
         "max_drawdown_pct": max_dd * 100.0,
-        "beta": beta,
-        "alpha": alpha * 100.0, # Alpha as a percentage
+        "drawdown_peak_date": peak_date,
+        "drawdown_trough_date": trough_date,
+        "drawdown_recovery_date": recovery_date,
+        "beta": beta_nifty,  # Use Nifty 100 beta as primary
+        "alpha": alpha_nifty * 100.0,  # Use Nifty 100 alpha as primary (in percentage)
+        "beta_bench": beta,  # Specific benchmark beta
+        "alpha_bench": alpha * 100.0,  # Specific benchmark alpha
         "var_95_daily_pct": var_95_daily * 100.0,
         "cvar_95_daily_pct": cvar_95_daily * 100.0,
         "sector_hhi": hhi,
-        "aum_crore": fund["min_lumpsum_amount"] * 10 # Place holder or fallback, wait, let's load actual AUM from scheme performance!
+        "r_squared_nifty": r_squared_nifty
     })
 
 df_metrics = pd.DataFrame(metrics_list)
@@ -178,11 +220,18 @@ df_metrics["composite_score"] = (
     0.10 * df_metrics["rank_drawdown"]
 )
 
-# Output CSV
+# Output CSV: Scorecard
 df_metrics.sort_values(by="composite_score", ascending=False, inplace=True)
 scorecard_path = os.path.join(processed_dir, "fund_scorecard.csv")
 df_metrics.to_csv(scorecard_path, index=False)
 print(f"Fund scorecard saved to {scorecard_path}")
+
+# Output CSV: Alpha & Beta vs Nifty 100
+alpha_beta_df = df_metrics[["amfi_code", "scheme_name", "alpha", "beta", "r_squared_nifty"]].copy()
+alpha_beta_df.rename(columns={"alpha": "alpha_pct", "r_squared_nifty": "r_squared"}, inplace=True)
+alpha_beta_path = os.path.join(processed_dir, "alpha_beta.csv")
+alpha_beta_df.to_csv(alpha_beta_path, index=False)
+print(f"Alpha-Beta report saved to {alpha_beta_path}")
 
 # Load updated scorecard back into SQLite database
 print("Updating SQLite table 'fact_performance'...")
@@ -194,8 +243,7 @@ db_perf_cols = [
     "max_drawdown_pct", "morningstar_rating", "aum_crore", "composite_score"
 ]
 df_db_perf = df_metrics[db_perf_cols].copy()
-df_db_perf.rename(columns={"max_drawdown_pct": "max_drawdown_pct"}, inplace=True)
-
 df_db_perf.to_sql("fact_performance", conn, if_exists="replace", index=False)
 conn.close()
 print("SQLite database table 'fact_performance' updated successfully.")
+
